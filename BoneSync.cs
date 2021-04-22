@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
 namespace Hont
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
+
     public class BoneSync : MonoBehaviour
     {
         [Serializable]
@@ -14,41 +14,49 @@ namespace Hont
             public Transform b;
         }
 
-        public bool updateBone = false;
         public SkinnedMeshRenderer[] masterRenderers;
         public SkinnedMeshRenderer[] slaveRenderers;
-        [Header("debug data, don`t modify")]
-        public List<Pair> pairList;
+        public Vector3 offset;
+
+        [Header("debug data, don`t modify")] public List<Pair> pairList;
 
 
-        void OnEnable()
+        private void LateUpdate()
         {
-            if (updateBone)
-                UpdateBoneMapping();
-        }
+            offset = -transform.position;
+            
+            Vector3 cachePosition = transform.position;
+            Quaternion cacheRotation = transform.rotation;
+            Vector3 cacheLocalScale = transform.localScale;
 
-        void LateUpdate()
-        {
+            transform.position = Vector3.zero - offset;
+            transform.rotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+
             for (int i = 0, iMax = pairList.Count; i < iMax; i++)
             {
-                var pair = pairList[i];
+                Pair pair = pairList[i];
 
-                pair.b.transform.localPosition = pair.a.transform.localPosition;
-                pair.b.transform.localRotation = pair.a.transform.localRotation;
+                pair.b.transform.position = pair.a.transform.position;
+                pair.b.transform.rotation = pair.a.transform.rotation;
                 pair.b.transform.localScale = pair.a.transform.localScale;
             }
+
+            transform.position = cachePosition;
+            transform.rotation = cacheRotation;
+            transform.localScale = cacheLocalScale;
         }
 
         [ContextMenu("Manual UpdateBoneMapping")]
-        void UpdateBoneMapping()
+        public void UpdateBoneMapping()
         {
-            var slaveBonesList = new List<Transform>(slaveRenderers.Length * 10);
+            List<Transform> slaveBonesList = new List<Transform>(slaveRenderers.Length * 10);
             for (int i = 0; i < slaveRenderers.Length; i++)
             {
-                var renderer = slaveRenderers[i];
+                SkinnedMeshRenderer renderer = slaveRenderers[i];
                 for (int j = 0, jMax = renderer.bones.Length; j < jMax; j++)
                 {
-                    var bone = renderer.bones[j];
+                    Transform bone = renderer.bones[j];
                     slaveBonesList.Add(bone);
                 }
             }
@@ -56,15 +64,15 @@ namespace Hont
             pairList = new List<Pair>(slaveBonesList.Count);
             for (int i = 0; i < masterRenderers.Length; i++)
             {
-                var renderer = masterRenderers[i];
+                SkinnedMeshRenderer renderer = masterRenderers[i];
                 for (int j = 0, jMax = renderer.bones.Length; j < jMax; j++)
                 {
-                    var bone = renderer.bones[j];
+                    Transform bone = renderer.bones[j];
 
-                    var slaveBone = slaveBonesList.Find(m => m.name == bone.name);
+                    Transform slaveBone = slaveBonesList.Find(m => m.name == bone.name);
 
-                    if (slaveBone != null)
-                        pairList.Add(new Pair() { a = bone, b = slaveBone });
+                    if (slaveBone)
+                        pairList.Add(new Pair() {a = bone, b = slaveBone});
                 }
             }
         }
